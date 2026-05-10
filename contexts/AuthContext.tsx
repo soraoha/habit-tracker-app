@@ -3,7 +3,8 @@ import {
   User,
   GoogleAuthProvider,
   onAuthStateChanged,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   getAuth,
 } from 'firebase/auth';
@@ -24,8 +25,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // getAuth は useEffect 内（ブラウザ実行時のみ）で呼び出す
     const auth = getAuth(app);
+
+    // ログイン後のリダイレクト結果を処理する
+    getRedirectResult(auth).catch(() => {
+      // リダイレクト結果がない場合は無視
+    });
+
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
@@ -35,7 +41,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     const auth = getAuth(app);
-    await signInWithPopup(auth, googleProvider);
+    // ポップアップではなくリダイレクト方式を使用（GitHub Pages との相性が良い）
+    await signInWithRedirect(auth, googleProvider);
   };
 
   const logOut = async () => {
