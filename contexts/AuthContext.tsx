@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   User,
-  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   onAuthStateChanged,
-  sendPasswordResetEmail,
-  signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -12,13 +11,13 @@ import { auth } from '@/lib/firebase';
 type AuthContextType = {
   user: User | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   logOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+const googleProvider = new GoogleAuthProvider();
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -32,24 +31,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const signUp = async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email, password);
-  };
-
-  const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+  const signInWithGoogle = async () => {
+    await signInWithPopup(auth, googleProvider);
   };
 
   const logOut = async () => {
     await signOut(auth);
   };
 
-  const resetPassword = async (email: string) => {
-    await sendPasswordResetEmail(auth, email);
-  };
-
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, logOut, resetPassword }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, logOut }}>
       {children}
     </AuthContext.Provider>
   );
