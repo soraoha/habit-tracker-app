@@ -5,8 +5,9 @@ import {
   onAuthStateChanged,
   signInWithPopup,
   signOut,
+  getAuth,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { app } from '@/lib/firebase';
 
 type AuthContextType = {
   user: User | null;
@@ -16,7 +17,6 @@ type AuthContextType = {
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
-
 const googleProvider = new GoogleAuthProvider();
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -24,6 +24,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // getAuth は useEffect 内（ブラウザ実行時のみ）で呼び出す
+    const auth = getAuth(app);
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
@@ -32,10 +34,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signInWithGoogle = async () => {
+    const auth = getAuth(app);
     await signInWithPopup(auth, googleProvider);
   };
 
   const logOut = async () => {
+    const auth = getAuth(app);
     await signOut(auth);
   };
 

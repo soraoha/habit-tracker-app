@@ -1,5 +1,4 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -11,6 +10,11 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-export const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+// initializeApp は apiKey を検証しないため SSR でも安全
+export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
+// getFirestore は apiKey を即時検証しないため SSR でも安全
 export const db = getFirestore(app);
+
+// getAuth は apiKey を即時検証するため SSR で失敗する。
+// 各コンポーネントやフックの内部で呼び出し、モジュールロード時には呼ばない。
