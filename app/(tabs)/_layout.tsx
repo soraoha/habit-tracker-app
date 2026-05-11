@@ -7,6 +7,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useAuth } from '@/contexts/AuthContext';
+import { SelectedDateProvider } from '@/contexts/SelectedDateContext';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
@@ -30,6 +31,7 @@ export default function TabLayout() {
   if (!user) return <Redirect href="/login" />;
 
   return (
+    <SelectedDateProvider>
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
@@ -71,5 +73,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </SelectedDateProvider>
   );
 }
