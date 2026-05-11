@@ -107,7 +107,7 @@ export default function HabitListScreen() {
               {/* チェックボタン */}
               <Pressable onPress={() => handleToggle(item.id)} style={styles.iconBtn}>
                 <FontAwesome
-                  name={done ? 'check-circle' : 'circle-o'}
+                  name={done ? 'check-circle' : 'check-circle-o'}
                   size={28}
                   color={done ? item.color : '#C7C7CC'}
                 />
