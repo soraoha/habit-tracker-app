@@ -27,12 +27,15 @@ export default function CalendarScreen() {
   });
 
   const prevMonth = () => {
-    const d = new Date(year, month - 2, 1);
-    setMonthStr(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    // new Date() の月計算バグを避けて直接算術で計算
+    const newMonth = month === 1 ? 12 : month - 1;
+    const newYear = month === 1 ? year - 1 : year;
+    setMonthStr(`${newYear}-${String(newMonth).padStart(2, '0')}`);
   };
   const nextMonth = () => {
-    const d = new Date(year, month, 1);
-    setMonthStr(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    const newMonth = month === 12 ? 1 : month + 1;
+    const newYear = month === 12 ? year + 1 : year;
+    setMonthStr(`${newYear}-${String(newMonth).padStart(2, '0')}`);
   };
 
   const activeHabits = habits.filter(h => h.isActive);
