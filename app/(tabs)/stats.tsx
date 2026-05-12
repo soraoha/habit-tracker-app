@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHabits } from '@/hooks/useHabits';
 import { useRecords } from '@/hooks/useRecords';
@@ -25,18 +25,31 @@ function getRange(period: Period) {
     return { start: toStr(start), end: todayStr, days, label: `${now.getMonth() + 1}月` };
   }
   // year
-  const start = new Date(now.getFullYear(), 0, 1);
-  const days = Math.floor((now.getTime() - start.getTime()) / 86400000) + 1;
-  return { start: toStr(start), end: todayStr, days, label: `${now.getFullYear()}年` };
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const days = Math.floor((now.getTime() - startOfYear.getTime()) / 86400000) + 1;
+  return { start: toStr(startOfYear), end: todayStr, days, label: `${now.getFullYear()}年` };
 }
 
 export default function StatsScreen() {
   const { user } = useAuth();
   const [period, setPeriod] = useState<Period>('month');
-  const { habits } = useHabits(user?.uid);
 
+  // SSRのhydration後にのみクライアント描画することでDOM不整合を防ぐ
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  const { habits } = useHabits(user?.uid);
   const { start, end, days, label } = useMemo(() => getRange(period), [period]);
   const { records } = useRecords(user?.uid, start, end);
+
+  // mountedになるまではローディング表示（SSR DOMとの競合を回避）
+  if (!mounted) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
 
   const activeHabits = habits.filter((h) => h.isActive);
   const todayStr = toStr(new Date());
@@ -84,49 +97,56 @@ export default function StatsScreen() {
         ))}
       </View>
 
-      {/* 全体概要カード */}
-      <Text style={styles.sectionTitle}>{label}の概要</Text>
-      <View style={styles.summaryRow}>
-        <StatCard label="今日の達成" value={`${todayCompleted}/${activeHabits.length}`} color="#007AFF" />
-        <StatCard label="達成率" value={`${overallRate}%`} color="#34C759" />
-        <StatCard label="習慣数" value={`${activeHabits.length}`} color="#FF9500" />
-      </View>
-
-      {/* 全体進捗バー */}
-      <View style={styles.overallCard}>
-        <View style={styles.overallHeader}>
-          <Text style={styles.overallTitle}>全体達成状況（{label}）</Text>
-          <Text style={[styles.overallRate, { color: '#34C759' }]}>{overallRate}%</Text>
+      {/* period をkeyにしてperiod変更時にDOMを強制再生成 */}
+      <View key={`stats-${period}`}>
+        {/* 全体概要カード */}
+        <Text style={styles.sectionTitle}>{label}の概要</Text>
+        <View style={styles.summaryRow}>
+          <StatCard
+            label="今日の成果"
+            value={`${todayCompleted}/${activeHabits.length}`}
+            color="#007AFF"
+          />
+          <StatCard label="達成率" value={`${overallRate}%`} color="#34C759" />
+          <StatCard label="習慣数" value={`${activeHabits.length}`} color="#FF9500" />
         </View>
-        <View style={styles.barBg}>
-          <View style={[styles.barFill, { width: `${overallRate}%`, backgroundColor: '#34C759' }]} />
-        </View>
-        <Text style={styles.overallDetail}>
-          {overallCompleted} / {overallPossible} 回達成
-        </Text>
-      </View>
 
-      {/* 習慣別 */}
-      <Text style={styles.sectionTitle}>習慣別の達成状況</Text>
-      {statsPerHabit.length === 0 && (
-        <Text style={styles.empty}>習慣を追加してください</Text>
-      )}
-      {statsPerHabit.map(({ habit, completed, rate, streak }) => (
-        <View key={habit.id} style={styles.habitCard}>
-          <View style={styles.habitHeader}>
-            <View style={[styles.colorDot, { backgroundColor: habit.color }]} />
-            <Text style={styles.habitName}>{habit.name}</Text>
-            <Text style={[styles.habitRateText, { color: habit.color }]}>{rate}%</Text>
+        {/* 全体進捗バー */}
+        <View style={styles.overallCard}>
+          <View style={styles.overallHeader}>
+            <Text style={styles.overallTitle}>全体達成状況（{label}）</Text>
+            <Text style={[styles.overallRateText, { color: '#34C759' }]}>{overallRate}%</Text>
           </View>
           <View style={styles.barBg}>
-            <View style={[styles.barFill, { width: `${rate}%`, backgroundColor: habit.color }]} />
+            <View style={[styles.barFill, { width: `${overallRate}%`, backgroundColor: '#34C759' }]} />
           </View>
-          <View style={styles.habitStats}>
-            <Text style={styles.statText}>{completed} / {days} 日達成</Text>
-            <Text style={styles.streakText}>🔥 連続 {streak} 日</Text>
-          </View>
+          <Text style={styles.overallDetail}>
+            {overallCompleted} / {overallPossible} 回達成
+          </Text>
         </View>
-      ))}
+
+        {/* 習慣別 */}
+        <Text style={styles.sectionTitle}>習慣別の達成状況</Text>
+        {statsPerHabit.length === 0 && (
+          <Text style={styles.empty}>習慣を追加してください</Text>
+        )}
+        {statsPerHabit.map(({ habit, completed, rate, streak }) => (
+          <View key={habit.id} style={styles.habitCard}>
+            <View style={styles.habitHeader}>
+              <View style={[styles.colorDot, { backgroundColor: habit.color }]} />
+              <Text style={styles.habitName}>{habit.name}</Text>
+              <Text style={[styles.habitRateText, { color: habit.color }]}>{rate}%</Text>
+            </View>
+            <View style={styles.barBg}>
+              <View style={[styles.barFill, { width: `${rate}%`, backgroundColor: habit.color }]} />
+            </View>
+            <View style={styles.habitStats}>
+              <Text style={styles.statText}>{completed} / {days} 日達成</Text>
+              <Text style={styles.streakText}>🔥 連続 {streak} 日</Text>
+            </View>
+          </View>
+        ))}
+      </View>
     </ScrollView>
   );
 }
@@ -141,6 +161,7 @@ function StatCard({ label, value, color }: { label: string; value: string; color
 }
 
 const styles = StyleSheet.create({
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F2F2F7' },
   container: { flex: 1, backgroundColor: '#F2F2F7' },
   content: { padding: 16, gap: 12, paddingBottom: 40 },
   toggleRow: {
@@ -153,11 +174,15 @@ const styles = StyleSheet.create({
   toggleBtn: {
     flex: 1, paddingVertical: 9, borderRadius: 8, alignItems: 'center',
   },
-  toggleBtnActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
+  toggleBtnActive: {
+    backgroundColor: '#fff',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
+  },
   toggleText: { fontSize: 15, fontWeight: '600', color: '#8E8E93' },
   toggleTextActive: { color: '#1C1C1E' },
-  sectionTitle: { fontSize: 17, fontWeight: '700', color: '#1C1C1E', marginTop: 4 },
-  summaryRow: { flexDirection: 'row', gap: 10 },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: '#1C1C1E', marginTop: 12 },
+  summaryRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
   statCard: {
     flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 14, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
@@ -166,17 +191,17 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 22, fontWeight: '700' },
   statLabel: { fontSize: 11, color: '#8E8E93', marginTop: 4, textAlign: 'center' },
   overallCard: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16, gap: 10,
+    backgroundColor: '#fff', borderRadius: 12, padding: 16, gap: 10, marginTop: 8,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
   },
   overallHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   overallTitle: { fontSize: 14, fontWeight: '600', color: '#1C1C1E' },
-  overallRate: { fontSize: 22, fontWeight: '700' },
+  overallRateText: { fontSize: 22, fontWeight: '700' },
   overallDetail: { fontSize: 12, color: '#8E8E93', textAlign: 'right' },
   empty: { color: '#8E8E93', textAlign: 'center', padding: 20 },
   habitCard: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16, gap: 10,
+    backgroundColor: '#fff', borderRadius: 12, padding: 16, gap: 10, marginTop: 8,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
   },
