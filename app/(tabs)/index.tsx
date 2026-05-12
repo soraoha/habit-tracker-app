@@ -32,6 +32,9 @@ export default function HabitListScreen() {
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState(COLORS[0]);
 
+  // 削除確認用ステート
+  const [deletingHabit, setDeletingHabit] = useState<{ id: string; name: string } | null>(null);
+
   const todayStr = today();
   const isToday = selectedDate === todayStr;
 
@@ -52,10 +55,13 @@ export default function HabitListScreen() {
   };
 
   const handleDelete = (habitId: string, name: string) => {
-    Alert.alert('削除確認', `「${name}」を削除しますか？\n記録も一緒に削除されます。`, [
-      { text: 'キャンセル', style: 'cancel' },
-      { text: '削除', style: 'destructive', onPress: () => deleteHabit(habitId) },
-    ]);
+    setDeletingHabit({ id: habitId, name });
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingHabit) return;
+    await deleteHabit(deletingHabit.id);
+    setDeletingHabit(null);
   };
 
   const openEdit = (habit: { id: string; name: string; color: string }) => {
@@ -107,7 +113,7 @@ export default function HabitListScreen() {
               {/* チェックボタン */}
               <Pressable onPress={() => handleToggle(item.id)} style={styles.iconBtn}>
                 <FontAwesome
-                  name={done ? 'check-circle' : 'check-circle-o'}
+                  name={done ? 'check-circle' : 'circle-o'}
                   size={28}
                   color={done ? item.color : '#C7C7CC'}
                 />
@@ -175,6 +181,25 @@ export default function HabitListScreen() {
           </Pressable>
         </View>
       </Modal>
+
+      {/* 削除確認モーダル */}
+      <Modal visible={!!deletingHabit} transparent animationType="fade">
+        <Pressable style={styles.overlay} onPress={() => setDeletingHabit(null)} />
+        <View style={styles.deleteSheet}>
+          <Text style={styles.sheetTitle}>削除確認</Text>
+          <Text style={styles.deleteMsg}>
+            「{deletingHabit?.name}」を削除しますか？{'\n'}記録も一緒に削除されます。
+          </Text>
+          <View style={styles.deleteActions}>
+            <Pressable style={styles.cancelBtn} onPress={() => setDeletingHabit(null)}>
+              <Text style={styles.cancelBtnText}>キャンセル</Text>
+            </Pressable>
+            <Pressable style={styles.deleteBtn} onPress={confirmDelete}>
+              <Text style={styles.deleteBtnText}>削除する</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -225,4 +250,18 @@ const styles = StyleSheet.create({
   colorChipSelected: { borderWidth: 3, borderColor: '#1C1C1E' },
   addBtn: { backgroundColor: '#007AFF', borderRadius: 10, padding: 16, alignItems: 'center' },
   addBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  deleteSheet: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24,
+  },
+  deleteMsg: { fontSize: 15, color: '#3C3C43', lineHeight: 22, marginBottom: 24 },
+  deleteActions: { flexDirection: 'row', gap: 12 },
+  cancelBtn: {
+    flex: 1, backgroundColor: '#F2F2F7', borderRadius: 10, padding: 16, alignItems: 'center',
+  },
+  cancelBtnText: { color: '#1C1C1E', fontSize: 16, fontWeight: '600' },
+  deleteBtn: {
+    flex: 1, backgroundColor: '#FF3B30', borderRadius: 10, padding: 16, alignItems: 'center',
+  },
+  deleteBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });

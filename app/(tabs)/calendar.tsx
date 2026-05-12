@@ -4,25 +4,30 @@ import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/SelectedDateContext';
 import { useHabits } from '@/hooks/useHabits';
-import { useRecords, currentMonth, today } from '@/hooks/useRecords';
+import { useRecords, today } from '@/hooks/useRecords';
 
 const WEEK_DAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
-function getDaysInMonth(year: number, month: number) {
-  return new Date(year, month + 1, 0).getDate();
+function getDaysInMonth(year: number, month: number): number {
+  // month は 1-12。new Date(y, month, 0) で month 月の末日を取得
+  return new Date(year, month, 0).getDate();
 }
 
 export default function CalendarScreen() {
   const { user } = useAuth();
   const { selectedDate, setSelectedDate } = useSelectedDate();
-  const [monthStr, setMonthStr] = useState(currentMonth());
+
+  // year / month を独立した state で管理（文字列変換に依存しない）
+  const now = new Date();
+  const [year, setYear] = useState<number>(now.getFullYear());
+  const [month, setMonth] = useState<number>(now.getMonth() + 1); // 1〜12
+
+  const monthStr = `${year}-${String(month).padStart(2, '0')}`;
+
   const { habits } = useHabits(user?.uid);
   const { records } = useRecords(user?.uid, monthStr);
 
-  const parts = monthStr.split('-');
-  const year = Number(parts[0]);
-  const month = Number(parts[1]);
-  const daysInMonth = getDaysInMonth(year, month - 1);
+  const daysInMonth = getDaysInMonth(year, month);
   const todayStr = today();
 
   // 月の1日が何曜日か (0=日, 6=土)
@@ -30,23 +35,25 @@ export default function CalendarScreen() {
 
   const goToPrevMonth = () => {
     if (month === 1) {
-      setMonthStr(`${year - 1}-12`);
+      setMonth(12);
+      setYear(prev => prev - 1);
     } else {
-      setMonthStr(`${year}-${String(month - 1).padStart(2, '0')}`);
+      setMonth(prev => prev - 1);
     }
   };
 
   const goToNextMonth = () => {
     if (month === 12) {
-      setMonthStr(`${year + 1}-01`);
+      setMonth(1);
+      setYear(prev => prev + 1);
     } else {
-      setMonthStr(`${year}-${String(month + 1).padStart(2, '0')}`);
+      setMonth(prev => prev + 1);
     }
   };
 
   const activeHabits = habits.filter(h => h.isActive);
 
-  const completionRate = (date: string) => {
+  const completionRate = (date: string): number | null => {
     if (activeHabits.length === 0) return null;
     const done = records.filter(r => r.date === date && r.completed).length;
     return done / activeHabits.length;
@@ -57,7 +64,7 @@ export default function CalendarScreen() {
     router.navigate('/(tabs)');
   };
 
-  // セル配列を作成（先頭に空白を追加）
+  // セル配列（先頭に曜日オフセット分の空白を挿入）
   const cells: (string | null)[] = [
     ...Array(firstDayOfWeek).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => {
@@ -65,10 +72,9 @@ export default function CalendarScreen() {
       return `${monthStr}-${String(d).padStart(2, '0')}`;
     }),
   ];
-  // 7の倍数になるよう末尾を埋める
   while (cells.length % 7 !== 0) cells.push(null);
 
-  // 7列ごとに行に分割
+  // 7列ごとに週の行へ分割
   const rows: (string | null)[][] = [];
   for (let i = 0; i < cells.length; i += 7) {
     rows.push(cells.slice(i, i + 7));
@@ -108,7 +114,7 @@ export default function CalendarScreen() {
             <View key={rowIdx} style={styles.row}>
               {row.map((date, colIdx) => {
                 if (!date) {
-                  return <View key={`empty-${rowIdx}-${colIdx}`} style={styles.dayCell} />;
+                  return <View key={`e-${rowIdx}-${colIdx}`} style={[styles.dayCell, styles.emptyCel]} />;
                 }
                 const rate = completionRate(date);
                 const dayNum = parseInt(date.split('-')[2]);
@@ -184,8 +190,8 @@ const styles = StyleSheet.create({
     padding: 16, backgroundColor: '#fff',
     borderBottomWidth: 1, borderBottomColor: '#E5E5EA',
   },
-  navBtn: { padding: 8 },
-  navText: { fontSize: 22, color: '#007AFF', fontWeight: '600' },
+  navBtn: { padding: 12 },
+  navText: { fontSize: 22, color: '#007AFF', fontWeight: '700' },
   monthLabel: { fontSize: 18, fontWeight: '700', color: '#1C1C1E' },
   weekHeader: {
     flexDirection: 'row',
@@ -206,6 +212,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: 'transparent',
     minHeight: 72,
   },
+  emptyCel: { backgroundColor: 'transparent', borderColor: 'transparent' },
   dayCellToday: {
     borderColor: '#007AFF', backgroundColor: '#EAF3FF',
   },
