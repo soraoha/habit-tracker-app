@@ -27,18 +27,16 @@ export default function HabitListScreen() {
   const [newName, setNewName] = useState('');
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
 
-  // 編集用ステート
   const [editingHabit, setEditingHabit] = useState<{ id: string; name: string; color: string } | null>(null);
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState(COLORS[0]);
 
-  // 削除確認用ステート
-  const [deletingHabit, setDeletingHabit] = useState<{ id: string; name: string } | null>(null);
+  // 削除確認：Modalを使わずインライン表示でDOM競合を回避
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const todayStr = today();
   const isToday = selectedDate === todayStr;
 
-  // 選択日付で未記録の習慣（当日のみバナー表示）
   const unrecorded = isToday
     ? habits.filter(h => h.isActive && !records.some(r => r.date === selectedDate && r.habitId === h.id && r.completed))
     : [];
@@ -54,15 +52,9 @@ export default function HabitListScreen() {
     await toggleRecord(habitId, selectedDate, !existing?.completed);
   };
 
-  const handleDelete = (habitId: string, name: string) => {
-    setDeletingHabit({ id: habitId, name });
-  };
-
-  const confirmDelete = async () => {
-    if (!deletingHabit) return;
-    const habitId = deletingHabit.id;
-    setDeletingHabit(null);   // モーダルを先に閉じてからDOMが安定した後に削除
-    await deleteHabit(habitId);
+  const confirmDelete = async (habitId: string) => {
+    setDeletingId(null);          // インライン確認を先に消す
+    await deleteHabit(habitId);   // その後削除（FlatListが単独で更新）
   };
 
   const openEdit = (habit: { id: string; name: string; color: string }) => {
@@ -103,26 +95,43 @@ export default function HabitListScreen() {
         renderItem={({ item }) => {
           const rec = records.find(r => r.date === selectedDate && r.habitId === item.id);
           const done = rec?.completed ?? false;
+          const isDeleting = deletingId === item.id;
+
           return (
-            <View style={styles.item}>
+            <View style={[styles.item, isDeleting && styles.itemDeleting]}>
               <View style={[styles.colorDot, { backgroundColor: item.color }]} />
-              <Text style={[styles.habitName, done && styles.habitDone]}>{item.name}</Text>
-              {/* 編集ボタン */}
-              <Pressable onPress={() => openEdit(item)} style={styles.iconBtn}>
-                <FontAwesome name="pencil" size={16} color="#C7C7CC" />
-              </Pressable>
-              {/* チェックボタン */}
-              <Pressable onPress={() => handleToggle(item.id)} style={styles.iconBtn}>
-                <FontAwesome
-                  name={done ? 'check-circle' : 'circle-o'}
-                  size={28}
-                  color={done ? item.color : '#C7C7CC'}
-                />
-              </Pressable>
-              {/* 削除ボタン */}
-              <Pressable onPress={() => handleDelete(item.id, item.name)} style={styles.iconBtn}>
-                <FontAwesome name="trash-o" size={20} color="#FF3B30" />
-              </Pressable>
+              <Text style={[styles.habitName, done && styles.habitDone]} numberOfLines={1}>
+                {item.name}
+              </Text>
+
+              {isDeleting ? (
+                // インライン削除確認（Modalなし→removeChildエラーなし）
+                <>
+                  <Pressable style={styles.deleteConfirmBtn} onPress={() => confirmDelete(item.id)}>
+                    <Text style={styles.deleteConfirmText}>削除する</Text>
+                  </Pressable>
+                  <Pressable style={styles.deleteCancelBtn} onPress={() => setDeletingId(null)}>
+                    <Text style={styles.deleteCancelText}>取消</Text>
+                  </Pressable>
+                </>
+              ) : (
+                // 通常操作ボタン
+                <>
+                  <Pressable onPress={() => openEdit(item)} style={styles.iconBtn}>
+                    <FontAwesome name="pencil" size={16} color="#C7C7CC" />
+                  </Pressable>
+                  <Pressable onPress={() => handleToggle(item.id)} style={styles.iconBtn}>
+                    <FontAwesome
+                      name={done ? 'check-circle' : 'circle-o'}
+                      size={28}
+                      color={done ? item.color : '#C7C7CC'}
+                    />
+                  </Pressable>
+                  <Pressable onPress={() => setDeletingId(item.id)} style={styles.iconBtn}>
+                    <FontAwesome name="trash-o" size={20} color="#FF3B30" />
+                  </Pressable>
+                </>
+              )}
             </View>
           );
         }}
@@ -182,25 +191,6 @@ export default function HabitListScreen() {
           </Pressable>
         </View>
       </Modal>
-
-      {/* 削除確認モーダル */}
-      <Modal visible={!!deletingHabit} transparent animationType="none">
-        <Pressable style={styles.overlay} onPress={() => setDeletingHabit(null)} />
-        <View style={styles.sheet}>
-          <Text style={styles.sheetTitle}>削除確認</Text>
-          <Text style={styles.deleteMsg}>
-            「{deletingHabit?.name}」を削除しますか？{'\n'}記録も一緒に削除されます。
-          </Text>
-          <View style={styles.deleteActions}>
-            <Pressable style={styles.cancelBtn} onPress={() => setDeletingHabit(null)}>
-              <Text style={styles.cancelBtnText}>キャンセル</Text>
-            </Pressable>
-            <Pressable style={styles.deleteBtn} onPress={confirmDelete}>
-              <Text style={styles.deleteBtnText}>削除する</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -226,11 +216,25 @@ const styles = StyleSheet.create({
     borderRadius: 12, padding: 14, gap: 8,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    borderWidth: 1.5, borderColor: 'transparent',
+  },
+  itemDeleting: {
+    borderColor: '#FF3B30', backgroundColor: '#FFF5F5',
   },
   colorDot: { width: 12, height: 12, borderRadius: 6, flexShrink: 0 },
   habitName: { flex: 1, fontSize: 15, color: '#1C1C1E' },
   habitDone: { color: '#8E8E93', textDecorationLine: 'line-through' },
   iconBtn: { padding: 4 },
+  deleteConfirmBtn: {
+    backgroundColor: '#FF3B30', borderRadius: 8,
+    paddingVertical: 7, paddingHorizontal: 12,
+  },
+  deleteConfirmText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  deleteCancelBtn: {
+    backgroundColor: '#E5E5EA', borderRadius: 8,
+    paddingVertical: 7, paddingHorizontal: 12,
+  },
+  deleteCancelText: { color: '#3C3C43', fontWeight: '600', fontSize: 13 },
   fab: {
     position: 'absolute', bottom: 28, right: 24,
     width: 56, height: 56, borderRadius: 28, backgroundColor: '#007AFF',
@@ -251,14 +255,4 @@ const styles = StyleSheet.create({
   colorChipSelected: { borderWidth: 3, borderColor: '#1C1C1E' },
   addBtn: { backgroundColor: '#007AFF', borderRadius: 10, padding: 16, alignItems: 'center' },
   addBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  deleteMsg: { fontSize: 15, color: '#3C3C43', lineHeight: 22, marginBottom: 24 },
-  deleteActions: { flexDirection: 'row', gap: 12 },
-  cancelBtn: {
-    flex: 1, backgroundColor: '#F2F2F7', borderRadius: 10, padding: 16, alignItems: 'center',
-  },
-  cancelBtnText: { color: '#1C1C1E', fontSize: 16, fontWeight: '600' },
-  deleteBtn: {
-    flex: 1, backgroundColor: '#FF3B30', borderRadius: 10, padding: 16, alignItems: 'center',
-  },
-  deleteBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });
