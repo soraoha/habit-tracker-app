@@ -123,7 +123,7 @@ function HabitBarChart({ slots, color }: { slots: ChartSlot[]; color: string }) 
             const barH = Math.max(slot.rate > 0 ? 4 : 0, Math.round(slot.rate * CHART_H));
             const pct = Math.round(slot.rate * 100);
             return (
-              <View key={i} style={s.barSlot}>
+              <View key={`bar-${slot.label}-${i}`} style={s.barSlot}>
                 {slot.rate > 0 && (
                   <Text style={[s.barPct, { color }]}>{pct}%</Text>
                 )}
@@ -136,7 +136,7 @@ function HabitBarChart({ slots, color }: { slots: ChartSlot[]; color: string }) 
       {/* X軸ラベル */}
       <View style={{ flexDirection: 'row', marginLeft: 28, marginTop: 3 }}>
         {slots.map((slot, i) => (
-          <View key={i} style={{ flex: 1, alignItems: 'center' }}>
+          <View key={`lbl-${slot.label}-${i}`} style={{ flex: 1, alignItems: 'center' }}>
             <Text style={s.xLabel}>{slot.label}</Text>
           </View>
         ))}
@@ -242,7 +242,7 @@ export default function StatsScreen() {
               </View>
 
               {/* 個別棒グラフ（カード幅に自動フィット）*/}
-              <HabitBarChart slots={slots} color={habit.color} />
+              <HabitBarChart key={period} slots={slots} color={habit.color} />
 
               {/* サマリー */}
               <View style={st.cardFooter}>
