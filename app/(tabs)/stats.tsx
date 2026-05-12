@@ -205,6 +205,14 @@ export default function StatsScreen() {
 
   const chartLabel = period === 'week' ? '日ごと' : period === 'month' ? '週ごと' : '月ごと';
 
+  // 全習慣を集計した全体スロット
+  const overallSlots: ChartSlot[] = habitStats.length > 0
+    ? habitStats[0].slots.map((slot, i) => ({
+        label: slot.label,
+        rate: habitStats.reduce((sum, hs) => sum + (hs.slots[i]?.rate ?? 0), 0) / habitStats.length,
+      }))
+    : [];
+
   return (
     <ScrollView style={st.container} contentContainerStyle={st.content}>
       {/* 期間トグル */}
@@ -226,6 +234,14 @@ export default function StatsScreen() {
           <StatCard label="達成率" value={`${overallRate}%`} color="#34C759" />
           <StatCard label="習慣数" value={`${activeHabits.length}`} color="#FF9500" />
         </View>
+
+        {/* 全体グラフ */}
+        {overallSlots.length > 0 && (
+          <View style={st.overallCard}>
+            <Text style={st.overallTitle}>全体の達成状況（{chartLabel}）</Text>
+            <HabitBarChart key={`overall-${period}`} slots={overallSlots} color="#007AFF" />
+          </View>
+        )}
 
         {/* 習慣別グリッド */}
         <Text style={st.sectionTitle}>習慣別の達成状況（{chartLabel}）</Text>
@@ -290,4 +306,6 @@ const st = StyleSheet.create({
   footerText: { fontSize: 11, color: '#8E8E93' },
   streakText: { fontSize: 11, color: '#FF9500', fontWeight: '600' },
   empty: { color: '#8E8E93', textAlign: 'center', padding: 20 },
+  overallCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
+  overallTitle: { fontSize: 15, fontWeight: '700', color: '#1C1C1E', textAlign: 'center', marginBottom: 4 },
 });
