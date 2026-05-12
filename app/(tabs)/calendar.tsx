@@ -87,7 +87,7 @@ export default function CalendarScreen() {
         <Pressable onPress={goToPrevMonth} style={styles.navBtn}>
           <Text style={styles.navText}>{'<'}</Text>
         </Pressable>
-        <Text style={styles.monthLabel}>{year}年 {month}月</Text>
+        <Text key={`label-${year}-${month}`} style={styles.monthLabel}>{year}年 {month}月</Text>
         <Pressable onPress={goToNextMonth} style={styles.navBtn}>
           <Text style={styles.navText}>{'>'}</Text>
         </Pressable>

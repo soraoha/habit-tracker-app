@@ -60,8 +60,9 @@ export default function HabitListScreen() {
 
   const confirmDelete = async () => {
     if (!deletingHabit) return;
-    await deleteHabit(deletingHabit.id);
-    setDeletingHabit(null);
+    const habitId = deletingHabit.id;
+    setDeletingHabit(null);   // モーダルを先に閉じてからDOMが安定した後に削除
+    await deleteHabit(habitId);
   };
 
   const openEdit = (habit: { id: string; name: string; color: string }) => {
@@ -183,9 +184,9 @@ export default function HabitListScreen() {
       </Modal>
 
       {/* 削除確認モーダル */}
-      <Modal visible={!!deletingHabit} transparent animationType="fade">
+      <Modal visible={!!deletingHabit} transparent animationType="none">
         <Pressable style={styles.overlay} onPress={() => setDeletingHabit(null)} />
-        <View style={styles.deleteSheet}>
+        <View style={styles.sheet}>
           <Text style={styles.sheetTitle}>削除確認</Text>
           <Text style={styles.deleteMsg}>
             「{deletingHabit?.name}」を削除しますか？{'\n'}記録も一緒に削除されます。
@@ -250,10 +251,6 @@ const styles = StyleSheet.create({
   colorChipSelected: { borderWidth: 3, borderColor: '#1C1C1E' },
   addBtn: { backgroundColor: '#007AFF', borderRadius: 10, padding: 16, alignItems: 'center' },
   addBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  deleteSheet: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24,
-  },
   deleteMsg: { fontSize: 15, color: '#3C3C43', lineHeight: 22, marginBottom: 24 },
   deleteActions: { flexDirection: 'row', gap: 12 },
   cancelBtn: {
