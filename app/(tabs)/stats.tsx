@@ -25,12 +25,13 @@ function getRange(period: Period) {
     return { start: toStr(s), end: todayStr, days: 7, label: '過去7日間' };
   }
   if (period === 'month') {
-    const s = new Date(now.getFullYear(), now.getMonth(), 1);
-    return { start: toStr(s), end: todayStr, days: now.getDate(), label: `${now.getMonth() + 1}月` };
+    // 当日から30日前まで
+    const s = new Date(now); s.setDate(now.getDate() - 29);
+    return { start: toStr(s), end: todayStr, days: 30, label: '過去30日間' };
   }
-  const s = new Date(now.getFullYear(), 0, 1);
-  const days = Math.floor((now.getTime() - s.getTime()) / 86400000) + 1;
-  return { start: toStr(s), end: todayStr, days, label: `${now.getFullYear()}年` };
+  // 当日から365日前まで
+  const s = new Date(now); s.setDate(now.getDate() - 364);
+  return { start: toStr(s), end: todayStr, days: 365, label: '過去1年間' };
 }
 
 type ChartSlot = { label: string; rate: number };
@@ -46,6 +47,7 @@ function buildHabitSlots(
   );
   const now = new Date();
 
+  // ── 週：過去7日間を日ごとに表示 ──
   if (period === 'week') {
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(now); d.setDate(now.getDate() - 6 + i);
@@ -54,39 +56,52 @@ function buildHabitSlots(
     });
   }
 
+  // ── 月：過去30日間を週ごとに集計（W1=最古週〜W5=今週）──
   if (period === 'month') {
-    const year = now.getFullYear(), month = now.getMonth() + 1;
-    const todayDay = now.getDate();
-    const daysInMonth = new Date(year, month, 0).getDate();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const start30 = new Date(today); start30.setDate(today.getDate() - 29);
+    const MLABELS = ['4週前', '3週前', '2週前', '先週', '今週'];
     const slots: ChartSlot[] = [];
-    for (let wn = 1; wn <= 5; wn++) {
-      const ws = (wn - 1) * 7 + 1;
-      if (ws > daysInMonth || ws > todayDay) break;
-      const we = Math.min(ws + 6, daysInMonth, todayDay);
-      const daysInW = we - ws + 1;
-      let cnt = 0;
-      for (let d = ws; d <= we; d++) {
-        const ds = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        if (doneSet.has(ds)) cnt++;
+
+    for (let wn = 0; wn < 5; wn++) {
+      const weekStart = new Date(start30); weekStart.setDate(start30.getDate() + wn * 7);
+      if (weekStart > today) break;
+      let cnt = 0, dCnt = 0;
+      for (let d = 0; d < 7; d++) {
+        const date = new Date(weekStart); date.setDate(weekStart.getDate() + d);
+        if (date > today) break;
+        dCnt++;
+        if (doneSet.has(toStr(date))) cnt++;
       }
-      slots.push({ label: `第${wn}週`, rate: daysInW > 0 ? cnt / daysInW : 0 });
+      slots.push({ label: MLABELS[wn], rate: dCnt > 0 ? cnt / dCnt : 0 });
     }
     return slots;
   }
 
-  // year
-  const year = now.getFullYear(), cm = now.getMonth() + 1, cd = now.getDate();
-  return Array.from({ length: cm }, (_, i) => {
-    const m = i + 1;
-    const daysInM = new Date(year, m, 0).getDate();
-    const days = m < cm ? daysInM : cd;
+  // ── 年：過去12ヶ月を月ごとに集計 ──
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yearStart = new Date(today); yearStart.setDate(today.getDate() - 364);
+  const slots: ChartSlot[] = [];
+
+  for (let i = 11; i >= 0; i--) {
+    const target = new Date(today); target.setMonth(today.getMonth() - i);
+    const yr = target.getFullYear();
+    const mo = target.getMonth() + 1;
+
+    const monthFirst = new Date(yr, mo - 1, 1);
+    const monthLast  = new Date(yr, mo, 0);
+    const rangeStart = monthFirst < yearStart ? yearStart : monthFirst;
+    const rangeEnd   = monthLast  > today     ? today     : monthLast;
+
+    const totalDays = Math.floor((rangeEnd.getTime() - rangeStart.getTime()) / 86400000) + 1;
     let cnt = 0;
-    for (let d = 1; d <= days; d++) {
-      const ds = `${year}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      if (doneSet.has(ds)) cnt++;
+    for (let d = 0; d < totalDays; d++) {
+      const date = new Date(rangeStart); date.setDate(rangeStart.getDate() + d);
+      if (doneSet.has(toStr(date))) cnt++;
     }
-    return { label: MONTH_NAMES[i], rate: days > 0 ? cnt / days : 0 };
-  });
+    slots.push({ label: `${mo}月`, rate: totalDays > 0 ? cnt / totalDays : 0 });
+  }
+  return slots;
 }
 
 // ── 習慣ごとの個別棒グラフ（flex ベースで幅に自動フィット）──
