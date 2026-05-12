@@ -225,22 +225,29 @@ export default function StatsScreen() {
   const { start, end, days, label } = useMemo(() => getRange(period), [period]);
   const { records } = useRecords(user?.uid, start, end);
 
+  // activeHabitsはhookではないが、下のuseMemoが依存するため early return より前に計算
+  const activeHabits = habits.filter((h) => h.isActive);
+
+  // ★ useMemoはhookなので必ずearly returnより前に置く
+  //    （ここが以前 early return 後にあり React Error #310 の原因だった）
+  const chartGroups = useMemo(
+    () => buildChartGroups(period, activeHabits, records),
+    // activeHabitsは毎回新規配列なのでhabitsを依存にしてキャッシュを安定化
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [period, habits, records]
+  );
+
+  // ── early return はすべてのhook呼び出しの後 ──
   if (!mounted) {
     return <View style={styles.loader}><ActivityIndicator size="large" color="#007AFF" /></View>;
   }
 
-  const activeHabits = habits.filter((h) => h.isActive);
+  // ── 以降は通常の計算（hookではない）──
   const todayStr = toStr(new Date());
-
   const overallCompleted = records.filter((r) => r.completed).length;
   const overallPossible = activeHabits.length * days;
   const overallRate = overallPossible > 0 ? Math.round((overallCompleted / overallPossible) * 100) : 0;
   const todayCompleted = records.filter((r) => r.date === todayStr && r.completed).length;
-
-  const chartGroups = useMemo(
-    () => buildChartGroups(period, activeHabits, records),
-    [period, activeHabits, records]
-  );
 
   const doneSet = new Set(records.filter((r) => r.completed).map((r) => `${r.habitId}_${r.date}`));
   const statsPerHabit = activeHabits.map((habit) => {
