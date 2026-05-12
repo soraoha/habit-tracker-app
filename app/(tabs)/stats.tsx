@@ -185,7 +185,7 @@ export default function StatsScreen() {
   // グリッド列数・カード幅
   const GRID_PAD = 16;
   const CARD_GAP = 8;
-  const cols = screenW > 900 ? 3 : screenW > 600 ? 2 : 1;
+  const cols = screenW > 500 ? 3 : 1;
   const cardW = (screenW - GRID_PAD * 2 - CARD_GAP * (cols - 1)) / cols;
 
   // 習慣別統計＋スロットデータ
@@ -235,11 +235,17 @@ export default function StatsScreen() {
           <StatCard label="習慣数" value={`${activeHabits.length}`} color="#FF9500" />
         </View>
 
-        {/* 全体グラフ */}
+        {/* 全体グラフ（サマリーと習慣グリッドの間） */}
         {overallSlots.length > 0 && (
-          <View style={st.overallCard}>
-            <Text style={st.overallTitle}>全体の達成状況（{chartLabel}）</Text>
-            <HabitBarChart key={`overall-${period}`} slots={overallSlots} color="#007AFF" />
+          <View style={st.overallSection}>
+            <View style={st.overallHeader}>
+              <View style={st.overallHeaderBar} />
+              <Text style={st.overallTitle}>全体の達成状況（{chartLabel}）</Text>
+              <View style={st.overallHeaderBar} />
+            </View>
+            <View style={st.overallCard}>
+              <HabitBarChart key={`overall-${period}`} slots={overallSlots} color="#007AFF" />
+            </View>
           </View>
         )}
 
@@ -306,6 +312,9 @@ const st = StyleSheet.create({
   footerText: { fontSize: 11, color: '#8E8E93' },
   streakText: { fontSize: 11, color: '#FF9500', fontWeight: '600' },
   empty: { color: '#8E8E93', textAlign: 'center', padding: 20 },
-  overallCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
-  overallTitle: { fontSize: 15, fontWeight: '700', color: '#1C1C1E', textAlign: 'center', marginBottom: 4 },
+  overallSection: { backgroundColor: '#EAF3FF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#C0D8FF' },
+  overallHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  overallHeaderBar: { flex: 1, height: 2, backgroundColor: '#007AFF', borderRadius: 1, opacity: 0.4 },
+  overallTitle: { fontSize: 14, fontWeight: '700', color: '#007AFF', textAlign: 'center' },
+  overallCard: { backgroundColor: '#fff', borderRadius: 10, padding: 10, shadowColor: '#007AFF', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
 });
