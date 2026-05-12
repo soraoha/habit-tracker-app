@@ -15,7 +15,11 @@ export type Record = {
   completed: boolean;
 };
 
-export function useRecords(userId: string | undefined, month?: string) {
+export function useRecords(
+  userId: string | undefined,
+  startDate?: string,
+  endDate?: string,
+) {
   const [records, setRecords] = useState<Record[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,18 +27,17 @@ export function useRecords(userId: string | undefined, month?: string) {
     if (!userId) return;
     setLoading(true);
     let q = query(collection(db, `users/${userId}/records`));
-    if (month) {
-      // month = "YYYY-MM"
+    if (startDate && endDate) {
       q = query(
         collection(db, `users/${userId}/records`),
-        where('date', '>=', `${month}-01`),
-        where('date', '<=', `${month}-31`)
+        where('date', '>=', startDate),
+        where('date', '<=', endDate),
       );
     }
     const snapshot = await getDocs(q);
     setRecords(snapshot.docs.map((d) => d.data() as Record));
     setLoading(false);
-  }, [userId, month]);
+  }, [userId, startDate, endDate]);
 
   useEffect(() => {
     fetchRecords();

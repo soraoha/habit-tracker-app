@@ -25,7 +25,7 @@ export default function CalendarScreen() {
   const monthStr = `${year}-${String(month).padStart(2, '0')}`;
 
   const { habits } = useHabits(user?.uid);
-  const { records } = useRecords(user?.uid, monthStr);
+  const { records } = useRecords(user?.uid, `${monthStr}-01`, `${monthStr}-31`);
 
   const daysInMonth = getDaysInMonth(year, month);
   const todayStr = today();

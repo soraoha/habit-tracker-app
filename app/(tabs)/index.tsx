@@ -122,9 +122,9 @@ export default function HabitListScreen() {
                   </Pressable>
                   <Pressable onPress={() => handleToggle(item.id)} style={styles.iconBtn}>
                     <FontAwesome
-                      name={done ? 'check-circle' : 'circle-o'}
+                      name={done ? 'check-circle' : 'check-circle-o'}
                       size={28}
-                      color={done ? item.color : '#C7C7CC'}
+                      color={item.color}
                     />
                   </Pressable>
                   <Pressable onPress={() => setDeletingId(item.id)} style={styles.iconBtn}>
