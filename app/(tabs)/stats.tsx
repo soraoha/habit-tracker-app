@@ -212,7 +212,72 @@ const cStyles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendColor: { width: 10, height: 10, borderRadius: 2 },
   legendText: { fontSize: 12, color: '#8E8E93' },
+  // 個別チャート用
+  singleYAxis: { width: 30, justifyContent: 'space-between', paddingRight: 4, borderRightWidth: 1, borderColor: '#E5E5EA' },
+  singleYLabel: { fontSize: 9, color: '#C7C7CC', textAlign: 'right' },
+  singleXLabel: { fontSize: 10, color: '#8E8E93', textAlign: 'center' },
 });
+
+const SINGLE_H = 90;    // 個別チャートの高さ
+const SINGLE_BAR = 28;  // 個別チャートのバー幅
+
+// ---- 習慣ごとの個別棒グラフ ----
+function SingleHabitBarChart({
+  data,
+  color,
+}: {
+  data: { label: string; rate: number }[];
+  color: string;
+}) {
+  if (data.length === 0) return null;
+
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+        {/* Y軸 */}
+        <View style={[cStyles.singleYAxis, { height: SINGLE_H }]}>
+          <Text style={cStyles.singleYLabel}>100%</Text>
+          <Text style={cStyles.singleYLabel}>50%</Text>
+          <Text style={cStyles.singleYLabel}>0%</Text>
+        </View>
+        {/* バー + X軸 */}
+        <View>
+          {/* バーエリア */}
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: SINGLE_H, borderBottomWidth: 1, borderColor: '#E5E5EA', paddingHorizontal: 4 }}>
+            {data.map((slot, i) => (
+              <View key={i} style={{ width: SINGLE_BAR + 8, alignItems: 'center', height: SINGLE_H, justifyContent: 'flex-end' }}>
+                {/* バー上部にパーセント */}
+                {slot.rate > 0 && (
+                  <Text style={{ fontSize: 8, color, fontWeight: '600', marginBottom: 2 }}>
+                    {Math.round(slot.rate * 100)}%
+                  </Text>
+                )}
+                <View
+                  style={{
+                    width: SINGLE_BAR,
+                    height: Math.max(slot.rate > 0 ? 4 : 0, Math.round(slot.rate * SINGLE_H)),
+                    backgroundColor: color,
+                    opacity: slot.rate === 0 ? 0.12 : 1,
+                    borderTopLeftRadius: 4,
+                    borderTopRightRadius: 4,
+                  }}
+                />
+              </View>
+            ))}
+          </View>
+          {/* X軸ラベル */}
+          <View style={{ flexDirection: 'row', paddingHorizontal: 4, marginTop: 4 }}>
+            {data.map((slot, i) => (
+              <View key={i} style={{ width: SINGLE_BAR + 8 }}>
+                <Text style={cStyles.singleXLabel}>{slot.label}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
 
 // ---- メイン画面 ----
 export default function StatsScreen() {
@@ -299,27 +364,37 @@ export default function StatsScreen() {
           <GroupedBarChart groups={chartGroups} colors={colors} habitNames={habitNames} />
         </View>
 
-        {/* 習慣別サマリー */}
+        {/* 習慣別 個別グラフ */}
         <Text style={styles.sectionTitle}>習慣別の達成状況</Text>
         {statsPerHabit.length === 0 && (
           <Text style={styles.empty}>習慣を追加してください</Text>
         )}
-        {statsPerHabit.map(({ habit, completed, rate, streak }) => (
-          <View key={habit.id} style={styles.habitCard}>
-            <View style={styles.habitHeader}>
-              <View style={[styles.colorDot, { backgroundColor: habit.color }]} />
-              <Text style={styles.habitName}>{habit.name}</Text>
-              <Text style={[styles.habitRateText, { color: habit.color }]}>{rate}%</Text>
+        {statsPerHabit.map(({ habit, completed, rate, streak }, habitIndex) => {
+          // 各習慣の時間軸データを chartGroups から抽出
+          const habitSlots = chartGroups.map((g) => ({
+            label: g.label,
+            rate: g.rates[habitIndex] ?? 0,
+          }));
+          return (
+            <View key={habit.id} style={styles.habitCard}>
+              {/* ヘッダー：名前・達成率 */}
+              <View style={styles.habitHeader}>
+                <View style={[styles.colorDot, { backgroundColor: habit.color }]} />
+                <Text style={styles.habitName}>{habit.name}</Text>
+                <Text style={[styles.habitRateText, { color: habit.color }]}>{rate}%</Text>
+              </View>
+
+              {/* 個別棒グラフ */}
+              <SingleHabitBarChart data={habitSlots} color={habit.color} />
+
+              {/* サマリー行 */}
+              <View style={styles.habitStats}>
+                <Text style={styles.statText}>{completed} / {days} 日達成</Text>
+                <Text style={styles.streakText}>🔥 連続 {streak} 日</Text>
+              </View>
             </View>
-            <View style={styles.barBg}>
-              <View style={[styles.barFill, { width: `${rate}%`, backgroundColor: habit.color }]} />
-            </View>
-            <View style={styles.habitStats}>
-              <Text style={styles.statText}>{completed} / {days} 日達成</Text>
-              <Text style={styles.streakText}>🔥 連続 {streak} 日</Text>
-            </View>
-          </View>
-        ))}
+          );
+        })}
       </View>
     </ScrollView>
   );
