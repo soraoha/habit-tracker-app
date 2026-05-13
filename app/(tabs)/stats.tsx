@@ -105,25 +105,25 @@ function buildHabitSlots(
 }
 
 // ── 習慣ごとの個別棒グラフ（flex ベースで幅に自動フィット）──
-function HabitBarChart({ slots, color }: { slots: ChartSlot[]; color: string }) {
+function HabitBarChart({ slots, color, chartH = CHART_H }: { slots: ChartSlot[]; color: string; chartH?: number }) {
   if (slots.length === 0) return null;
   return (
-    <View style={{ marginTop: 8 }}>
+    <View style={{ marginTop: 8, flex: 1 }}>
       {/* バーエリア */}
-      <View style={{ flexDirection: 'row', height: CHART_H }}>
+      <View style={{ flexDirection: 'row', height: chartH, flex: 1 }}>
         {/* Y軸 */}
-        <View style={s.yAxis}>
+        <View style={[s.yAxis, { height: chartH }]}>
           <Text style={s.yLabel}>100%</Text>
           <Text style={s.yLabel}>50%</Text>
           <Text style={s.yLabel}>0%</Text>
         </View>
         {/* 棒 */}
-        <View style={[s.barsArea, { height: CHART_H }]}>
+        <View style={[s.barsArea, { height: chartH }]}>
           {slots.map((slot, i) => {
-            const barH = Math.max(slot.rate > 0 ? 4 : 0, Math.round(slot.rate * CHART_H));
+            const barH = Math.max(slot.rate > 0 ? 4 : 0, Math.round(slot.rate * chartH));
             const pct = Math.round(slot.rate * 100);
             return (
-              <View key={`bar-${slot.label}-${i}`} style={s.barSlot}>
+              <View key={`bar-${slot.label}-${i}`} style={[s.barSlot, { height: chartH }]}>
                 {slot.rate > 0 && (
                   <Text style={[s.barPct, { color }]}>{pct}%</Text>
                 )}
@@ -149,7 +149,7 @@ const s = StyleSheet.create({
   yAxis: { width: 28, justifyContent: 'space-between', paddingRight: 3, borderRightWidth: 1, borderColor: '#E5E5EA' },
   yLabel: { fontSize: 8, color: '#C7C7CC', textAlign: 'right' },
   barsArea: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 2, borderBottomWidth: 1, borderColor: '#E5E5EA' },
-  barSlot: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: CHART_H, paddingHorizontal: 2 },
+  barSlot: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 2 },
   bar: { width: '75%', borderTopLeftRadius: 3, borderTopRightRadius: 3 },
   barPct: { fontSize: 7, fontWeight: '700', marginBottom: 2 },
   xLabel: { fontSize: 9, color: '#8E8E93' },
@@ -186,7 +186,9 @@ export default function StatsScreen() {
   const GRID_PAD = 16;
   const CARD_GAP = 8;
   const cols = screenW > 500 ? 3 : 1;
-  const cardW = (screenW - GRID_PAD * 2 - CARD_GAP * (cols - 1)) / cols;
+  const cardW = Math.floor((screenW - GRID_PAD * 2 - CARD_GAP * (cols - 1)) / cols);
+  // padding(24) + header(22) + chart margin(8) + x-axis(18) + footer(25) ≈ 97px
+  const habitChartH = Math.max(60, cardW - 97);
 
   // 習慣別統計＋スロットデータ
   const doneSet = new Set(records.filter((r) => r.completed).map((r) => `${r.habitId}_${r.date}`));
@@ -255,7 +257,7 @@ export default function StatsScreen() {
 
         <View style={[st.grid, { gap: CARD_GAP }]}>
           {habitStats.map(({ habit, completed, rate, streak, slots }) => (
-            <View key={habit.id} style={[st.habitCard, { width: cardW }]}>
+            <View key={habit.id} style={[st.habitCard, { width: cardW, height: cardW }]}>
               {/* ヘッダー */}
               <View style={st.cardHeader}>
                 <View style={[st.colorDot, { backgroundColor: habit.color }]} />
@@ -263,8 +265,8 @@ export default function StatsScreen() {
                 <Text style={[st.rateNum, { color: habit.color }]}>{rate}%</Text>
               </View>
 
-              {/* 個別棒グラフ（カード幅に自動フィット）*/}
-              <HabitBarChart key={period} slots={slots} color={habit.color} />
+              {/* 個別棒グラフ（正方形カードに最大フィット）*/}
+              <HabitBarChart key={period} slots={slots} color={habit.color} chartH={habitChartH} />
 
               {/* サマリー */}
               <View style={st.cardFooter}>
@@ -303,7 +305,7 @@ const st = StyleSheet.create({
   statValue: { fontSize: 22, fontWeight: '700' },
   statLabel: { fontSize: 11, color: '#8E8E93', marginTop: 4, textAlign: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  habitCard: { backgroundColor: '#fff', borderRadius: 12, padding: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
+  habitCard: { backgroundColor: '#fff', borderRadius: 12, padding: 12, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   colorDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
   habitName: { flex: 1, fontSize: 13, fontWeight: '700', color: '#1C1C1E' },
