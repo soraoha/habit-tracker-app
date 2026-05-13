@@ -192,12 +192,6 @@ export default function StatsScreen() {
   // padding(24) + header(22) + chart margin(8) + x-axis(18) + footer(25) ≈ 97px
   const habitChartH = Math.max(60, cardW - 97);
 
-  // habitStats を cols 列の行に分割（flex:1 レイアウト用）
-  const habitRows: (typeof habitStats)[] = [];
-  for (let i = 0; i < habitStats.length; i += cols) {
-    habitRows.push(habitStats.slice(i, i + cols));
-  }
-
   // 習慣別統計＋スロットデータ
   const doneSet = new Set(records.filter((r) => r.completed).map((r) => `${r.habitId}_${r.date}`));
   const habitStats = activeHabits.map((habit) => {
@@ -214,6 +208,12 @@ export default function StatsScreen() {
   });
 
   const chartLabel = period === 'week' ? '日ごと' : period === 'month' ? '週ごと' : '月ごと';
+
+  // habitStats を cols 列の行に分割（flex:1 レイアウト用）―habitStats 定義より後に置く
+  const habitRows = Array.from(
+    { length: Math.ceil(habitStats.length / cols) },
+    (_, rowIdx) => habitStats.slice(rowIdx * cols, (rowIdx + 1) * cols),
+  );
 
   // 全習慣を集計した全体スロット
   const overallSlots: ChartSlot[] = habitStats.length > 0
