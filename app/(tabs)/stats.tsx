@@ -186,10 +186,17 @@ export default function StatsScreen() {
   const GRID_PAD = 16;
   const CARD_GAP = 8;
   const cols = screenW > 520 ? 3 : 1;
-  // スクロールバー幅(~17px)・サブピクセル誤差を吸収するため -4px の安全マージン
-  const cardW = Math.floor((screenW - GRID_PAD * 2 - CARD_GAP * (cols - 1)) / cols) - 4;
+  // スクロールバー分(~20px)を除いた実効幅でカード幅を計算（全体グラフ・chartH算出用）
+  const safeW = screenW - 20;
+  const cardW = Math.floor((safeW - GRID_PAD * 2 - CARD_GAP * (cols - 1)) / cols);
   // padding(24) + header(22) + chart margin(8) + x-axis(18) + footer(25) ≈ 97px
   const habitChartH = Math.max(60, cardW - 97);
+
+  // habitStats を cols 列の行に分割（flex:1 レイアウト用）
+  const habitRows: (typeof habitStats)[] = [];
+  for (let i = 0; i < habitStats.length; i += cols) {
+    habitRows.push(habitStats.slice(i, i + cols));
+  }
 
   // 習慣別統計＋スロットデータ
   const doneSet = new Set(records.filter((r) => r.completed).map((r) => `${r.habitId}_${r.date}`));
@@ -260,24 +267,28 @@ export default function StatsScreen() {
         <Text style={st.sectionTitle}>習慣別の達成状況（{chartLabel}）</Text>
         {habitStats.length === 0 && <Text style={st.empty}>習慣を追加してください</Text>}
 
-        <View style={[st.grid, { gap: CARD_GAP }]}>
-          {habitStats.map(({ habit, completed, rate, streak, slots }) => (
-            <View key={habit.id} style={[st.habitCard, { width: cardW, height: cardW }]}>
-              {/* ヘッダー */}
-              <View style={st.cardHeader}>
-                <View style={[st.colorDot, { backgroundColor: habit.color }]} />
-                <Text style={st.habitName} numberOfLines={1}>{habit.name}</Text>
-                <Text style={[st.rateNum, { color: habit.color }]}>{rate}%</Text>
-              </View>
-
-              {/* 個別棒グラフ（正方形カードに最大フィット）*/}
-              <HabitBarChart key={period} slots={slots} color={habit.color} chartH={habitChartH} />
-
-              {/* サマリー */}
-              <View style={st.cardFooter}>
-                <Text style={st.footerText}>{completed}/{days}日達成</Text>
-                <Text style={st.streakText}>🔥 連続{streak}日</Text>
-              </View>
+        {/* 行ごとに flex:1 カードを並べる（右端の空き解消・3列確定）*/}
+        <View style={{ gap: CARD_GAP }}>
+          {habitRows.map((row, rowIdx) => (
+            <View key={`row-${rowIdx}`} style={{ flexDirection: 'row', gap: CARD_GAP }}>
+              {row.map(({ habit, completed, rate, streak, slots }) => (
+                <View key={habit.id} style={[st.habitCard, { flex: 1, aspectRatio: 1 }]}>
+                  <View style={st.cardHeader}>
+                    <View style={[st.colorDot, { backgroundColor: habit.color }]} />
+                    <Text style={st.habitName} numberOfLines={1}>{habit.name}</Text>
+                    <Text style={[st.rateNum, { color: habit.color }]}>{rate}%</Text>
+                  </View>
+                  <HabitBarChart key={period} slots={slots} color={habit.color} chartH={habitChartH} />
+                  <View style={st.cardFooter}>
+                    <Text style={st.footerText}>{completed}/{days}日達成</Text>
+                    <Text style={st.streakText}>🔥 連続{streak}日</Text>
+                  </View>
+                </View>
+              ))}
+              {/* 最終行が cols に満たない場合は空 flex:1 で穴埋め */}
+              {Array.from({ length: cols - row.length }, (_, j) => (
+                <View key={`pad-${j}`} style={{ flex: 1 }} />
+              ))}
             </View>
           ))}
         </View>
@@ -309,7 +320,6 @@ const st = StyleSheet.create({
   statCard: { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 14, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   statValue: { fontSize: 22, fontWeight: '700' },
   statLabel: { fontSize: 11, color: '#8E8E93', marginTop: 4, textAlign: 'center' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' },
   habitCard: { backgroundColor: '#fff', borderRadius: 12, padding: 12, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   colorDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
