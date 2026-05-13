@@ -17,26 +17,32 @@ function TabBarIcon(props: {
   return <FontAwesome size={24} style={{ marginBottom: -3 }} {...props} />;
 }
 
-// タブバー内「＋」ボタン（AddHabitProviderの内側で呼ばれる）
-function AddTabButton({ style }: { style?: object }) {
+// 習慣一覧タブのヘッダー右側：「＋」ボタン + 設定ギア
+function HabitListHeaderRight() {
+  const colorScheme = useColorScheme();
   const { openAdd } = useAddHabit();
   return (
-    <Pressable
-      onPress={openAdd}
-      style={[style, { flex: 1, justifyContent: 'center', alignItems: 'center' }]}
-      accessibilityRole="button"
-      accessibilityLabel="習慣を追加"
-    >
-      <View style={{
-        width: 46, height: 46, borderRadius: 23,
-        backgroundColor: '#007AFF',
-        justifyContent: 'center', alignItems: 'center',
-        shadowColor: '#007AFF', shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.35, shadowRadius: 6, elevation: 5,
-      }}>
-        <FontAwesome name="plus" size={22} color="#fff" />
-      </View>
-    </Pressable>
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 16, gap: 14 }}>
+      <Pressable onPress={openAdd} accessibilityLabel="習慣を追加">
+        <View style={{
+          width: 30, height: 30, borderRadius: 15,
+          backgroundColor: '#007AFF',
+          justifyContent: 'center', alignItems: 'center',
+        }}>
+          <FontAwesome name="plus" size={15} color="#fff" />
+        </View>
+      </Pressable>
+      <Pressable onPress={() => router.push('/settings')}>
+        {({ pressed }) => (
+          <FontAwesome
+            name="cog"
+            size={22}
+            color={Colors[colorScheme ?? 'light'].text}
+            style={{ opacity: pressed ? 0.5 : 1 }}
+          />
+        )}
+      </Pressable>
+    </View>
   );
 }
 
@@ -67,20 +73,7 @@ export default function TabLayout() {
             options={{
               title: '習慣一覧',
               tabBarIcon: ({ color }) => <TabBarIcon name="check-square-o" color={color} />,
-              headerRight: () => (
-                <Pressable
-                  onPress={() => router.push('/settings')}
-                  style={{ marginRight: 16 }}>
-                  {({ pressed }) => (
-                    <FontAwesome
-                      name="cog"
-                      size={22}
-                      color={Colors[colorScheme ?? 'light'].text}
-                      style={{ opacity: pressed ? 0.5 : 1 }}
-                    />
-                  )}
-                </Pressable>
-              ),
+              headerRight: () => <HabitListHeaderRight />,
             }}
           />
           <Tabs.Screen
@@ -90,22 +83,17 @@ export default function TabLayout() {
               tabBarIcon: ({ color }) => <TabBarIcon name="calendar" color={color} />,
             }}
           />
-          {/* タブバー中央の「＋」ボタン（ナビゲーションなし） */}
-          <Tabs.Screen
-            name="add-tab"
-            options={{
-              title: '',
-              tabBarLabel: () => null,
-              tabBarIcon: () => null,
-              tabBarButton: (props) => <AddTabButton style={props.style} />,
-            }}
-          />
           <Tabs.Screen
             name="stats"
             options={{
               title: '統計',
               tabBarIcon: ({ color }) => <TabBarIcon name="bar-chart" color={color} />,
             }}
+          />
+          {/* add-tab.tsx はルートとして残すが、タブバーには表示しない */}
+          <Tabs.Screen
+            name="add-tab"
+            options={{ href: null }}
           />
         </Tabs>
       </AddHabitProvider>
