@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator, Pressable, ScrollView, StyleSheet, Text,
   useWindowDimensions, View,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHabits, type Habit } from '@/hooks/useHabits';
 import { useRecords, type Record } from '@/hooks/useRecords';
@@ -166,7 +167,10 @@ export default function StatsScreen() {
 
   const { habits } = useHabits(user?.uid);
   const { start, end, days, label } = useMemo(() => getRange(period), [period]);
-  const { records } = useRecords(user?.uid, start, end);
+  const { records, refetch: refetchRecords } = useRecords(user?.uid, start, end);
+
+  // 統計タブがフォーカスされるたびに最新データを取得（他タブでの記録変更を反映）
+  useFocusEffect(useCallback(() => { refetchRecords(); }, [refetchRecords]));
 
   // early return（hook より後）
   if (!mounted) {
