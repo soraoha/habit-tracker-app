@@ -5,6 +5,7 @@ import {
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/SelectedDateContext';
+import { useAddHabit } from '@/contexts/AddHabitContext';
 import { useHabits } from '@/hooks/useHabits';
 import { useRecords, today } from '@/hooks/useRecords';
 
@@ -20,10 +21,10 @@ function formatDate(dateStr: string): string {
 export default function HabitListScreen() {
   const { user } = useAuth();
   const { selectedDate } = useSelectedDate();
+  const { showAdd, closeAdd } = useAddHabit();
   const { habits, addHabit, updateHabit, deleteHabit } = useHabits(user?.uid);
   const { records, toggleRecord } = useRecords(user?.uid);
 
-  const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
 
@@ -44,7 +45,7 @@ export default function HabitListScreen() {
   const handleAdd = async () => {
     if (!newName.trim()) return Alert.alert('エラー', '習慣名を入力してください');
     await addHabit(newName.trim(), selectedColor);
-    setNewName(''); setSelectedColor(COLORS[0]); setShowAdd(false);
+    setNewName(''); setSelectedColor(COLORS[0]); closeAdd();
   };
 
   const handleToggle = async (habitId: string) => {
@@ -137,14 +138,9 @@ export default function HabitListScreen() {
         }}
       />
 
-      {/* 追加ボタン */}
-      <Pressable style={styles.fab} onPress={() => setShowAdd(true)}>
-        <FontAwesome name="plus" size={24} color="#fff" />
-      </Pressable>
-
       {/* 習慣追加モーダル */}
       <Modal visible={showAdd} transparent animationType="slide">
-        <Pressable style={styles.overlay} onPress={() => setShowAdd(false)} />
+        <Pressable style={styles.overlay} onPress={closeAdd} />
         <View style={styles.sheet}>
           <Text style={styles.sheetTitle}>習慣を追加</Text>
           <TextInput
@@ -235,13 +231,6 @@ const styles = StyleSheet.create({
     paddingVertical: 7, paddingHorizontal: 12,
   },
   deleteCancelText: { color: '#3C3C43', fontWeight: '600', fontSize: 13 },
-  fab: {
-    position: 'absolute', bottom: 28, right: 24,
-    width: 56, height: 56, borderRadius: 28, backgroundColor: '#007AFF',
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2, shadowRadius: 8, elevation: 6,
-  },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)' },
   sheet: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
   sheetTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
