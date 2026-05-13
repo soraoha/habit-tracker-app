@@ -185,8 +185,9 @@ export default function StatsScreen() {
   // グリッド列数・カード幅
   const GRID_PAD = 16;
   const CARD_GAP = 8;
-  const cols = screenW > 500 ? 3 : 1;
-  const cardW = Math.floor((screenW - GRID_PAD * 2 - CARD_GAP * (cols - 1)) / cols);
+  const cols = screenW > 520 ? 3 : 1;
+  // スクロールバー幅(~17px)・サブピクセル誤差を吸収するため -4px の安全マージン
+  const cardW = Math.floor((screenW - GRID_PAD * 2 - CARD_GAP * (cols - 1)) / cols) - 4;
   // padding(24) + header(22) + chart margin(8) + x-axis(18) + footer(25) ≈ 97px
   const habitChartH = Math.max(60, cardW - 97);
 
@@ -237,18 +238,22 @@ export default function StatsScreen() {
           <StatCard label="習慣数" value={`${activeHabits.length}`} color="#FF9500" />
         </View>
 
-        {/* 全体グラフ（サマリーと習慣グリッドの間） */}
+        {/* 全体グラフ：習慣カードと同サイズの正方形・水平中央 */}
         {overallSlots.length > 0 && (
-          <View style={st.overallSection}>
-            <View style={st.overallHeader}>
-              <View style={st.overallHeaderBar} />
-              <Text style={st.overallTitle}>全体の達成状況（{chartLabel}）</Text>
-              <View style={st.overallHeaderBar} />
+          <>
+            <Text style={st.sectionTitle}>全体の達成状況（{chartLabel}）</Text>
+            <View style={[st.habitCard, { width: cardW, height: cardW, alignSelf: 'center', borderWidth: 2, borderColor: '#007AFF' }]}>
+              <View style={st.cardHeader}>
+                <View style={[st.colorDot, { backgroundColor: '#007AFF' }]} />
+                <Text style={st.habitName}>全習慣の平均</Text>
+                <Text style={[st.rateNum, { color: '#007AFF' }]}>{overallRate}%</Text>
+              </View>
+              <HabitBarChart key={`overall-${period}`} slots={overallSlots} color="#007AFF" chartH={habitChartH} />
+              <View style={st.cardFooter}>
+                <Text style={st.footerText}>{overallCompleted}/{overallPossible}回達成</Text>
+              </View>
             </View>
-            <View style={st.overallCard}>
-              <HabitBarChart key={`overall-${period}`} slots={overallSlots} color="#007AFF" />
-            </View>
-          </View>
+          </>
         )}
 
         {/* 習慣別グリッド */}
@@ -304,7 +309,7 @@ const st = StyleSheet.create({
   statCard: { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 14, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   statValue: { fontSize: 22, fontWeight: '700' },
   statLabel: { fontSize: 11, color: '#8E8E93', marginTop: 4, textAlign: 'center' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' },
   habitCard: { backgroundColor: '#fff', borderRadius: 12, padding: 12, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   colorDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
@@ -314,9 +319,4 @@ const st = StyleSheet.create({
   footerText: { fontSize: 11, color: '#8E8E93' },
   streakText: { fontSize: 11, color: '#FF9500', fontWeight: '600' },
   empty: { color: '#8E8E93', textAlign: 'center', padding: 20 },
-  overallSection: { backgroundColor: '#EAF3FF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#C0D8FF' },
-  overallHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  overallHeaderBar: { flex: 1, height: 2, backgroundColor: '#007AFF', borderRadius: 1, opacity: 0.4 },
-  overallTitle: { fontSize: 14, fontWeight: '700', color: '#007AFF', textAlign: 'center' },
-  overallCard: { backgroundColor: '#fff', borderRadius: 10, padding: 10, shadowColor: '#007AFF', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
 });
